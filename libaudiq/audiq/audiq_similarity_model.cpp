@@ -5,6 +5,7 @@
 #include "gaia2/transformation.h"
 #include "gaia2/distancefunction.h"
 #include "audiq/audiq_util.h"
+#include "audiq/audiq_types.h"
 #include "audiq/audiq_config.h"
 
 namespace audiq {

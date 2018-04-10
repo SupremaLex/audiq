@@ -2,18 +2,18 @@
 #include "audiq/audiq.h"
 #include <map>
 #include <set>
-#include <experimental/filesystem>
 #include "essentia/algorithm.h"
 #include "essentia/algorithmfactory.h"
 #include "audiq/audiq_util.h"
+#include "audiq/audiq_types.h"
 #include "audiq/audiq_config.h"
+#include "essentia_extractor/audiq_music_extractor.h"
 
 namespace audiq {
 namespace processing {
 
 using essentia::standard::Algorithm;
 using essentia::standard::AlgorithmFactory;
-namespace filesystem = std::experimental::filesystem;
 
 enum SampleType { percussion, vocal, melody };
 map<string, SampleType> name_to_type;
@@ -91,12 +91,17 @@ void ExtractLowLevel(Pool *pool, const string &file_name,
   Algorithm* extractor;
   InitializeMap();
   if ( filesystem::exists(profile) ) {
-    extractor = AlgorithmFactory::create("MusicExtractor",
-                                         "profile", profile);
+    extractor = new extractor::AudiqMusicExtractor;
+    extractor->configure("profile", profile);
+    /*extractor = AlgorithmFactory::create("MusicExtractor",
+                                         "profile", profile);*/
   } else {
-    extractor = AlgorithmFactory::create("MusicExtractor",
+    extractor = new extractor::AudiqMusicExtractor;
+    extractor->configure("lowlevelSilentFrames", "drop",
+                         "tonalSilentFrames", "drop");
+    /*extractor = AlgorithmFactory::create("MusicExtractor",
                                          "lowlevelSilentFrames", "drop",
-                                         "tonalSilentFrames", "drop");
+                                         "tonalSilentFrames", "drop");*/
   }
   extractor->input("filename").set(file_name);
   extractor->output("results").set(*pool);
