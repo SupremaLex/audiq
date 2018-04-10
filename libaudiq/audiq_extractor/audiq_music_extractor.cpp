@@ -17,12 +17,12 @@
  * version 3 along with this program.  If not, see http://www.gnu.org/licenses/
  */
 
-#include "essentia_extractor/audiq_music_extractor.h"
-
-using namespace std;
+#include "audiq_extractor/audiq_music_extractor.h"
+#include <map>
 
 namespace audiq {
 namespace extractor {
+using std::string;
 
 AudiqMusicExtractor::AudiqMusicExtractor() {
   declareParameters();
@@ -36,7 +36,7 @@ AudiqMusicExtractor::~AudiqMusicExtractor() {
   if (options.value<Real>("highlevel.compute")) {
 #if HAVE_GAIA2
     if (_svms) delete _svms;
-#endif  
+#endif
   }
 }
 
@@ -44,7 +44,6 @@ void AudiqMusicExtractor::reset() {}
 
 
 void AudiqMusicExtractor::configure() {
-
   downmix = "mix";
 
   analysisSampleRate = parameter("analysisSampleRate").toReal();
@@ -75,8 +74,8 @@ void AudiqMusicExtractor::configure() {
   mfccStats = parameter("mfccStats").toVectorString();
   gfccStats = parameter("gfccStats").toVectorString();
 
-#if HAVE_GAIA2 
-  if (parameter("highlevel").isConfigured()) { 
+#if HAVE_GAIA2
+  if (parameter("highlevel").isConfigured()) {
     svmModels = parameter("highlevel").toVectorString();
   }
 #endif
@@ -84,7 +83,7 @@ void AudiqMusicExtractor::configure() {
   options.clear();
   setExtractorDefaultOptions();
 
-  if (parameter("profile").isConfigured()) { 
+  if (parameter("profile").isConfigured()) {
     setExtractorOptions(parameter("profile").toString());
 
     analysisSampleRate = options.value<Real>("analysisSampleRate");
@@ -94,7 +93,7 @@ void AudiqMusicExtractor::configure() {
   }
 
   if (options.value<Real>("highlevel.compute")) {
-#if HAVE_GAIA2 
+#if HAVE_GAIA2
     svmModels = options.value<vector<string> >("highlevel.svm_models");
     _svms = AlgorithmFactory::create("AudiqMusicExtractorSVM", "svms", svmModels);
 #else
@@ -132,7 +131,7 @@ void AudiqMusicExtractor::setExtractorDefaultOptions() {
   options.set("average_loudness.silentFrames", loudnessSilentFrames);
 
   // statistics
-  options.set("lowlevel.stats", lowlevelStats); 
+  options.set("lowlevel.stats", lowlevelStats);
   options.set("tonal.stats", tonalStats);
 
   options.set("lowlevel.mfccStats", mfccStats);
@@ -170,9 +169,6 @@ void AudiqMusicExtractor::compute() {
   results.set("metadata.audio_properties.analysis.downmix", downmix);
   results.set("metadata.audio_properties.analysis.start_time", startTime);
   //results.set("metadata.audio_properties.analysis.end_time", endTime);
-
-  // TODO: we still compute some low-level descriptors with equal loudness filter...
-  // TODO: remove for consistency? evaluate on classification tasks?
   
   #if defined(_WIN32) && !defined(__MINGW32__)
     string slash = "\\";
@@ -197,12 +193,9 @@ void AudiqMusicExtractor::compute() {
   
   E_INFO("AudiqMusicExtractor: Compute md5 audio hash, codec, length, and EBU 128 loudness");
   computeAudioMetadata(audioFilename, results);
-  
   E_INFO("AudiqMusicExtractor: Replay gain");
   computeReplayGain(audioFilename, results);
-  
   E_INFO("AudiqMusicExtractor: Compute audio features");
-
   // normalize the audio with replay gain and compute as many lowlevel, rhythm,
   // and tonal descriptors as possible
   
@@ -243,13 +236,12 @@ void AudiqMusicExtractor::compute() {
   network_2.run();
 
   // Descriptors that require values from other descriptors in the previous chain
-  tonal->computeTuningSystemFeatures(results); // requires 'hpcp_highres'
+  tonal->computeTuningSystemFeatures(results);  // requires 'hpcp_highres'
 
   // TODO is this necessary? tuning_frequency should always have one value:
   Real tuningFreq = results.value<vector<Real> >(tonal->nameSpace + "tuning_frequency").back();
   results.remove(tonal->nameSpace + "tuning_frequency");
   results.set(tonal->nameSpace + "tuning_frequency", tuningFreq);
-  
 
   E_INFO("AudiqMusicExtractor: Compute aggregation");
   stats = computeAggregation(results);
@@ -257,7 +249,7 @@ void AudiqMusicExtractor::compute() {
   // pre-trained classifiers are only available in branches devoted for that
   // (eg: 2.0.1)
   if (options.value<Real>("highlevel.compute")) {
-#if HAVE_GAIA2    
+#if HAVE_GAIA2
     E_INFO("AudiqMusicExtractor: SVM models");
     _svms->input("pool").set(stats);
     _svms->output("pool").set(stats);
@@ -267,20 +259,18 @@ void AudiqMusicExtractor::compute() {
 #endif
   }
   E_INFO("All done");
-  
   resultsStats = stats;
   resultsFrames = results;
 }
 
 
-Pool AudiqMusicExtractor::computeAggregation(Pool& pool){
-
+Pool AudiqMusicExtractor::computeAggregation(Pool& pool) {
   // choose which descriptors stats to output
   const char* defaultStats[] = { "mean", "var", "stdev", "median", "min", "max", "dmean", "dmean2", "dvar", "dvar2" };
 
   map<string, vector<string> > exceptions;
   const vector<string>& descNames = pool.descriptorNames();
-  for (int i=0; i<(int)descNames.size(); i++) {
+  for (int i=0; i<static_cast<int>(descNames.size()); i++) {
     if (descNames[i].find("lowlevel.mfcc") != string::npos) {
       exceptions[descNames[i]] = options.value<vector<string> >("lowlevel.mfccStats");
       continue;
@@ -301,14 +291,7 @@ Pool AudiqMusicExtractor::computeAggregation(Pool& pool){
   Pool poolStats;
   aggregator->input("input").set(pool);
   aggregator->output("output").set(poolStats);
-
   aggregator->compute();
-
-
-  // add descriptors that may be missing due to content
-  const Real emptyVector[] = { 0, 0, 0, 0, 0, 0};
-
-  int statsSize = int(sizeof(defaultStats)/sizeof(defaultStats[0]));
 
   delete aggregator;
 
@@ -434,7 +417,6 @@ void AudiqMusicExtractor::computeAudioMetadata(const string& audioFilename, Pool
 
   scheduler::Network network(loader);
   network.run();
-  
   // set length (actually duration) of the file and length of analyzed segment
   Real length = loader->output("audio").totalProduced() / inputSampleRate;
   Real analysis_length = trimmer->output("signal").totalProduced() / analysisSampleRate;
@@ -464,7 +446,6 @@ void AudiqMusicExtractor::computeAudioMetadata(const string& audioFilename, Pool
 
 
 void AudiqMusicExtractor::computeReplayGain(const string& audioFilename, Pool& results) {
-
   streaming::AlgorithmFactory& factory = streaming::AlgorithmFactory::instance();
 
   replayGain = 0.0;
@@ -492,8 +473,7 @@ void AudiqMusicExtractor::computeReplayGain(const string& audioFilename, Pool& r
     catch (const EssentiaException&) {
       if (downmix == "mix") {
         downmix = "left";
-      }
-      else {
+      } else {
         throw EssentiaException("File looks like a completely silent file");
         //exit(4);
       }
@@ -517,8 +497,7 @@ void AudiqMusicExtractor::computeReplayGain(const string& audioFilename, Pool& r
     if (downmix == "mix") {
       downmix = "left";
       results.remove("metadata.audio_properties.replay_gain");
-    }
-    else {
+    } else {
       throw EssentiaException("File looks like a completely silent file... Aborting...");
       //exit(5);
     }
@@ -527,7 +506,6 @@ void AudiqMusicExtractor::computeReplayGain(const string& audioFilename, Pool& r
 
 
 void AudiqMusicExtractor::setExtractorOptions(const std::string& filename) {
-
   if (filename.empty()) return;
 
   Pool opts;
@@ -538,6 +516,6 @@ void AudiqMusicExtractor::setExtractorOptions(const std::string& filename) {
   options.merge(opts, "replace");
 }
 
-} // namespace standard
-} // namespace essentia
+}  // namespace extractor
+}  // namespace audiq
 

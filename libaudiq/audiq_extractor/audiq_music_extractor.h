@@ -20,6 +20,8 @@
 #ifndef AUDIQ_MUSIC_EXTRACTOR_H
 #define AUDIQ_MUSIC_EXTRACTOR_H
 
+#include <string>
+#include <vector>
 #include "essentia/pool.h"
 #include "essentia/algorithm.h"
 
@@ -118,7 +120,7 @@ class AudiqMusicExtractor : public essentia::standard::Algorithm {
     declareParameter("rhythmMethod", "the method used for beat tracking", "{multifeature,degara}", "degara");
     declareParameter("rhythmMinTempo", "the slowest tempo to detect [bpm]", "[40,180]", 40);
     declareParameter("rhythmMaxTempo", "the fastest tempo to detect [bpm]", "[60,250]", 208);
-  
+
     const char* statsArray[] = { "mean", "var", "stdev", "median", "min", "max", "dmean", "dmean2", "dvar", "dvar2" };
     const char* cepstrumStatsArray[] = { "mean", "cov", "icov" };
     vector<string> stats = arrayToVector<string>(statsArray);
@@ -131,7 +133,7 @@ class AudiqMusicExtractor : public essentia::standard::Algorithm {
     declareParameter("mfccStats", "the statistics to compute for MFCC features", "", cepstrumStats);
     declareParameter("gfccStats", "the statistics to compute for GFCC features", "", cepstrumStats);
 
-#if HAVE_GAIA2 
+#if HAVE_GAIA2
     declareParameter("highlevel", "list of high-level classifier models (gaia2 history filenames) to apply using extracted features. Skip classification if not specified (empty list)", "", Parameter::VECTOR_STRING);
 #endif
   }
@@ -141,10 +143,9 @@ class AudiqMusicExtractor : public essentia::standard::Algorithm {
   void configure();
   void compute();
   void reset();
-
 };
 
-} // namespace extractor
-} // namespace audiq
+}  // namespace extractor
+}  // namespace audiq
 
 #endif
