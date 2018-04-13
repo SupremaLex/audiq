@@ -7,7 +7,7 @@
 #include "audiq/audiq_util.h"
 #include "audiq/audiq_types.h"
 #include "audiq/audiq_config.h"
-#include "essentia_extractor/audiq_music_extractor.h"
+#include "audiq_extractor/audiq_music_extractor.h"
 
 namespace audiq {
 namespace processing {
