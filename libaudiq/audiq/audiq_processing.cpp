@@ -88,17 +88,15 @@ void ProcessSigsHighLevel(const string &directory) {
 void ExtractLowLevel(Pool *pool, const string &file_name,
                      const string &profile) {
   Pool temporary_pool;
-  Algorithm* extractor;
+  Algorithm* extractor = new extractor::AudiqMusicExtractor;;
   InitializeMap();
   if ( filesystem::exists(profile) ) {
-    extractor = new extractor::AudiqMusicExtractor;
     extractor->configure("profile", profile);
     /*extractor = AlgorithmFactory::create("MusicExtractor",
                                          "profile", profile);*/
   } else {
-    extractor = new extractor::AudiqMusicExtractor;
-    extractor->configure("lowlevelSilentFrames", "drop",
-                         "tonalSilentFrames", "drop");
+    extractor->configure("lowlevelSilentFrames", "noise",
+                         "tonalSilentFrames", "noise");
     /*extractor = AlgorithmFactory::create("MusicExtractor",
                                          "lowlevelSilentFrames", "drop",
                                          "tonalSilentFrames", "drop");*/
