@@ -26,10 +26,10 @@ types::audiq_similar FindSimilar(DataSet *global_dataset, DataSet *user_dataset,
   QStringList user_points = user_dataset->pointNames();
   DataSet* result_dataset = util::SumDataSets(global_dataset, user_dataset);
   DataSet* preprocessed = PreprocessDataSet(result_dataset);
-  DataSet* processed = DefaultProcessDataSet(preprocessed);
-  DistanceFunction* metric = DefaultMetric(processed,
+  //DataSet* processed = DefaultProcessDataSet(preprocessed);
+  DistanceFunction* metric = DefaultMetric(preprocessed,
                                            weights.at(0), weights.at(1), weights.at(2));
-  return FindSimilar(processed, user_points, metric);
+  return FindSimilar(preprocessed, user_points, metric);
 }
 
 types::audiq_similar FindSimilar(DataSet *dataset, const QStringList &user_points,
@@ -43,12 +43,12 @@ types::audiq_similar FindSimilar(DataSet *dataset, const QStringList &user_point
     auto result = v.nnSearch(p, metric);
     for ( auto pair : result.get(n + quantity) ) {
       // take only global dataset samples, even if samples from user dataser are more similar.
-      if ( !user_points.contains(pair.first) ) {
+      if ( !user_points.contains(pair.first)) {
         temporary.push_back(dataset->point(pair.first)
                             ->label(FILENAME_DESCRIPTOR)
                             .toSingleValue()
                             .toStdString());
-        std::cout << pair.first.toStdString() << "   " << pair.second << std::endl;
+        //std::cout << pair.first.toStdString() << "   " << pair.second << std::endl;
       }
     }
     // take the most similar n samples
@@ -62,7 +62,7 @@ types::audiq_similar FindSimilar(DataSet *dataset, const QStringList &user_point
 }
 
 DataSet* PreprocessDataSet(DataSet *dataset) {
-  ParameterMap enumerate_params;
+  /*ParameterMap enumerate_params;
   QStringList descriptors = {
     ".tonal.*.key*",
     ".tonal.*.scale*",
@@ -72,39 +72,14 @@ DataSet* PreprocessDataSet(DataSet *dataset) {
   enumerate_params.insert("descriptorNames", descriptors);
   ParameterMap normalize_params;
   normalize_params.insert("except", QStringList() << "*mfcc*" << "metadata*");
-  DataSet* enumerated = gaia2::transform(dataset, "Enumerate", enumerate_params);
-  DataSet* cleaned    = gaia2::transform(enumerated, "Cleaner");
-  delete enumerated;
-  DataSet* normalized = gaia2::transform(cleaned, "Normalize");
-  delete cleaned;
+  DataSet* enumerated = gaia2::transform(dataset, "Enumerate", enumerate_params);*/
+  //DataSet* cleaned    = gaia2::transform(dataset, "Cleaner");
+  //delete enumerated;
+  DataSet* normalized = gaia2::transform(dataset, "Normalize");
+  //delete cleaned;
   return normalized;
 }
 
-DataSet* DefaultProcessDataSet(DataSet *dataset) {
-  //
-  ParameterMap select_metadata;
-  select_metadata.insert("descriptorNames", "metadata.tags.file_name");
-  DataSet* metadata = gaia2::transform(dataset, "Select", select_metadata);
-  //
-  ParameterMap select_mfcc;
-  select_mfcc.insert("descriptorNames", QStringList() << "lowlevel.mfcc*");
-  DataSet* mfcc = gaia2::transform(dataset, "Select", select_mfcc);
-  //
-  ParameterMap select_highlevel;
-  select_highlevel.insert("descriptorNames", QStringList() << "highlevel*");
-  DataSet* highlevel = gaia2::transform(dataset, "Select", select_highlevel);
-  //
-  DataSet* pca = Pca(dataset, QStringList() << "lowlevel.mfcc*" << "highlevel*", 25);
-  DataSet* result = util::MergeDataSets({ metadata, mfcc, highlevel, pca });
-  // to reduce memory usage delete datasets which we don't need
-  delete pca;
-  delete highlevel;
-  delete mfcc;
-  delete metadata;
-  delete dataset;
-  //
-  return result;
-}
 
 DistanceFunction* DefaultMetric(DataSet *dataset, float weight_pca,
                                 float weight_mfcc, float weight_highlevel) {
@@ -141,20 +116,6 @@ DistanceFunction* DefaultMetric(DataSet *dataset, float weight_pca,
   return gaia2::MetricFactory::create("LinearCombination", dataset->layout(), composite_params);
 }
 
-DataSet* RemoveDescriptors(DataSet *dataset, const QStringList &descriptors) {
-  ParameterMap remove_params;
-  remove_params.insert("descriptorNames", descriptors);
-  remove_params.insert("failOnUnmatched", false);
-  return gaia2::transform(dataset, "Remove", remove_params);
-}
-
-DataSet* Pca(DataSet *dataset, const QStringList &except, int dimension) {
-  ParameterMap pca_params;
-  pca_params.insert("except", except);
-  pca_params.insert("dimension", dimension);
-  pca_params.insert("resultName", "pca");
-  return gaia2::transform(dataset, "PCA", pca_params);
-}
 
 }  // namespace similarity
 }  // namespace audiq

@@ -17,11 +17,13 @@ void ConcatenateDataSets(const string &datasets_directory, const string &dataset
   for ( auto& p : filesystem::recursive_directory_iterator(datasets_directory) ) {
     if ( first ) {
       result->load(QString::fromStdString(p.path().string()));
+      result->forgetHistory();
       first = false;
       continue;
     }
     DataSet loaded;
     loaded.load(QString::fromStdString(p.path().string()));
+    loaded.forgetHistory();
     result->appendDataSet(&loaded);
   }
   if ( !result->pointNames().empty() )
@@ -74,13 +76,12 @@ void SaveDataSet(const QVector<Point*> &samples, const string &dataset_name) {
   DataSet dataset;
   dataset.addPoints(samples);
   // Some transformations to reduce memory usage in future
-  DataSet* remove_vl = gaia2::transform(&dataset, "RemoveVL");
-  DataSet* transformed = gaia2::transform(remove_vl, "FixLength");
-  transformed->setName(QString::fromStdString(dataset_name));
-  transformed->save(QString::fromStdString(dataset_name));
-  delete remove_vl;
-  delete transformed;
+  DataSet* prepared = PrepareDataSet(&dataset);
+  prepared->setName(QString::fromStdString(dataset_name));
+  prepared->save(QString::fromStdString(dataset_name));
+  delete prepared;
 }
+
 
 void ReCreateDirs(const string &root_directory) {
   for ( auto t : types::TYPES ) {
@@ -106,6 +107,59 @@ Point* LoadPoint(const string &file_name, const string &point_name) {
     point->setLayout(point->layout());
   }*/
   return point;
+}
+
+DataSet* PrepareDataSet(DataSet *dataset) {
+  ParameterMap enumerate_params;
+  QStringList enumerate = {
+    ".tonal.*.key*",
+    ".tonal.*.scale*",
+    ".tonal.*_key*",
+    ".highlevel.*.value"
+  };
+  enumerate_params.insert("descriptorNames", enumerate);
+  DataSet* removed_vl = gaia2::transform(dataset, "RemoveVL");
+  DataSet* fixed_length = gaia2::transform(removed_vl, "FixLength");
+  delete removed_vl;
+  DataSet* transformed = gaia2::transform(fixed_length, "Enumerate", enumerate_params);
+  delete fixed_length;
+  //
+  ParameterMap select_metadata;
+  select_metadata.insert("descriptorNames", "metadata.tags.file_name");
+  DataSet* metadata = gaia2::transform(transformed, "Select", select_metadata);
+  //
+  ParameterMap select_mfcc;
+  select_mfcc.insert("descriptorNames", QStringList() << "lowlevel.mfcc*");
+  DataSet* mfcc = gaia2::transform(transformed, "Select", select_mfcc);
+  //
+  ParameterMap select_highlevel;
+  select_highlevel.insert("descriptorNames", QStringList() << "highlevel*");
+  DataSet* highlevel = gaia2::transform(transformed, "Select", select_highlevel);
+  //
+  ParameterMap normalize_params;
+  normalize_params.insert("except", QStringList() << "lowlevel.mfcc*" << "highlevel*");
+  DataSet* cleaned    = gaia2::transform(transformed, "Cleaner");
+  DataSet* normalized = gaia2::transform(cleaned, "Normalize", normalize_params);
+  DataSet* pca = Pca(normalized, QStringList() << "lowlevel.mfcc*" << "highlevel*", 25);
+  DataSet* result = MergeDataSets({ metadata, mfcc, highlevel, pca });
+  // to reduce memory usage delete datasets which we don't need
+  delete pca;
+  delete normalized;
+  delete cleaned;
+  delete highlevel;
+  delete mfcc;
+  delete metadata;
+  delete transformed;
+  //
+  return result;
+}
+
+DataSet* Pca(DataSet *dataset, const QStringList &except, int dimension) {
+  ParameterMap pca_params;
+  pca_params.insert("except", except);
+  pca_params.insert("dimension", dimension);
+  pca_params.insert("resultName", "pca");
+  return gaia2::transform(dataset, "PCA", pca_params);
 }
 
 DataSet* MergeDataSets(const vector<DataSet*> &datasets) {

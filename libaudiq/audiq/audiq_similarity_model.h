@@ -37,27 +37,8 @@ types::audiq_similar FindSimilar(DataSet *dataset, const QStringList &user_point
  */
 DataSet* PreprocessDataSet(DataSet *dataset);
 
-DataSet* DefaultProcessDataSet(DataSet *dataset);
-
 DistanceFunction* DefaultMetric(DataSet *dataset, float weight_pca, float weight_mfcc, float weight_highlevel);
-/**
- * @brief RemoveDescriptors Removes 'descriptors' from dataset.
- * @param dataset Original dataset.
- * @param descriptors Descriptors to be deleted from dataset.
- * @return New dataset without 'descriptors'.
- * @note Original dataset saved untoughed.
- */
-DataSet* RemoveDescriptors(DataSet *dataset, const QStringList &descriptors);
 
-/**
-  * @brief PCA Apply PCA transformation to dataset.
-  * @param dataset Original dataset.
-  * @param except Don't use this descriptors.
-  * @param dimension Target dimension.
-  * @return New dataset.
-  * @note Original dataset saved untoughed.
-  */
-DataSet* Pca(DataSet *dataset,  const QStringList &except, int dimension);
 
 }  // namespace similarity
 }  // namespace audiq

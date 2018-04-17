@@ -50,6 +50,10 @@ void ReCreateDirs(const string &root_directory);
  * LoadPoint Loads point from yaml file. If you don't need loaded point - free memory.
  */
 Point* LoadPoint(const string &file_name, const string &point_name);
+
+DataSet* PrepareDataSet(DataSet *dataset);
+
+DataSet* Pca(DataSet *dataset, const QStringList &except, int dimension);
 /**
  * MergeDataSets Merges datasets together, provided that their layout don't overlap, and
  * return the resulting dataset.
