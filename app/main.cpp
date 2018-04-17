@@ -71,6 +71,7 @@ int main(int argc, char* argv[]) {
       break;
     case 4:
       sounds_directory = argv[argc -4];
+      weights.clear();
       weights.push_back(std::stof(string(argv[argc - 3])));
       weights.push_back(std::stof(string(argv[argc - 2])));
       weights.push_back(std::stof(string(argv[argc - 1])));
@@ -78,6 +79,7 @@ int main(int argc, char* argv[]) {
     case 5:
       sounds_directory = argv[argc - 5];
       output_file = argv[argc - 4];
+      weights.clear();
       weights.push_back(std::stof(string(argv[argc - 3])));
       weights.push_back(std::stof(string(argv[argc - 2])));
       weights.push_back(std::stof(string(argv[argc - 1])));
