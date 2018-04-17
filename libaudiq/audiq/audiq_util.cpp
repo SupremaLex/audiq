@@ -55,7 +55,7 @@ void MergeFiles(const string &files_directory, const string &datasets_directory,
         samples[pair.first].clear();
         }
     }
-    Point* sample = LoadPoint(p.path().string(), p.path().filename().string());
+    Point* sample = LoadPoint(p.path().string(), p.path().stem());
     type = sample->label(TYPE_DESCRIPTOR).toSingleValue().toStdString();
     samples[type] << sample;
     ++counters[type];
