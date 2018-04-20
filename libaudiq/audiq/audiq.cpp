@@ -8,6 +8,7 @@
 
 audiq::audiq_similar audiq::Recommend(const bool one_dataset, const vector<float> &weights) {
   using gaia2::DataSet;
+  gaia2::init();
   string user_ds_name = USER_DATASET_NAME;
   string global_ds_name = GLOBAL_DATASET_NAME;
   vector<DataSet*> user_datasets;
