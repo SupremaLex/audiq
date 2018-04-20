@@ -11,7 +11,7 @@
 #define MD5_DESCRIPTOR      "metadata.audio_properties.md5_encoded"
 #define TYPE_DESCRIPTOR     "highlevel.type.value"
 
-#define SAMPLES_PER_DATASET 1000
+#define SAMPLES_PER_DATASET 2000
 #define QUANTITY            20
 
 #endif  // PROJECT_AUDIQ_CONFIG_H
