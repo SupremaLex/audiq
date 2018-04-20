@@ -29,16 +29,10 @@ types::audiq_similar FindSimilar(DataSet *global_dataset, DataSet *user_dataset,
  */
 types::audiq_similar FindSimilar(DataSet *dataset, const QStringList &user_points,
                                          DistanceFunction *metric, int quantity = QUANTITY);
-/**
- * @brief PreprocessDataSet Apply preprocessing to the dataset.
- * @param dataset Original dataset.
- * @return Preprocessed dataset.
- *  Preprocessing consist of applying of Enumerate, Cleaner and Normalize transformations.
- */
-DataSet* PreprocessDataSet(DataSet *dataset);
+
+DistanceFunction* CompressedDefaultMetric(DataSet *dataset, float weight_pca, float weight_mfcc, float weight_highlevel);
 
 DistanceFunction* DefaultMetric(DataSet *dataset, float weight_pca, float weight_mfcc, float weight_highlevel);
-
 
 }  // namespace similarity
 }  // namespace audiq
