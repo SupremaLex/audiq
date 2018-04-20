@@ -1,5 +1,6 @@
 #include "audiq/audiq_util.h"
 #include <map>
+#include <algorithm>
 #include "gaia2/utils.h"
 #include "audiq/audiq_config.h"
 #include "audiq/audiq_types.h"
@@ -10,24 +11,26 @@ namespace util {
 using gaia2::ParameterMap;
 namespace filesystem = std::experimental::filesystem;
 
+struct Concatenate {
+  Concatenate(DataSet* ds) {
+    result = ds;
+  }
+  void operator()(const filesystem::path &dataset_name) {
+    DataSet ds;
+    ds.load(QString::fromStdString(dataset_name));
+    ds.forgetHistory();
+    result->forgetHistory();
+    result->appendDataSet(&ds);
+  }
+  DataSet* result;
+};
+
 void ConcatenateDataSets(const string &datasets_directory, const string &dataset_name) {
   DataSet ds;
-  DataSet* result = &ds;
-  bool first = true;
-  for ( auto& p : filesystem::recursive_directory_iterator(datasets_directory) ) {
-    if ( first ) {
-      result->load(QString::fromStdString(p.path().string()));
-      result->forgetHistory();
-      first = false;
-      continue;
-    }
-    DataSet loaded;
-    loaded.load(QString::fromStdString(p.path().string()));
-    loaded.forgetHistory();
-    result->appendDataSet(&loaded);
-  }
-  if ( !result->pointNames().empty() )
-    result->save(QString::fromStdString(dataset_name + ".db"));
+  filesystem::recursive_directory_iterator files(datasets_directory);
+  std::for_each(filesystem::begin(files), filesystem::end(files), Concatenate(&ds));
+  if ( !ds.pointNames().empty() )
+    ds.save(QString::fromStdString(dataset_name + ".db"));
 }
 
 void MergeFiles(const string &files_directory, const string &datasets_directory,
@@ -110,47 +113,48 @@ Point* LoadPoint(const string &file_name, const string &point_name) {
 }
 
 DataSet* PrepareDataSet(DataSet *dataset) {
-  ParameterMap enumerate_params;
-  QStringList enumerate = {
-    ".tonal.*.key*",
-    ".tonal.*.scale*",
-    ".tonal.*_key*",
-    ".highlevel.*.value"
-  };
-  enumerate_params.insert("descriptorNames", enumerate);
-  DataSet* removed_vl = gaia2::transform(dataset, "RemoveVL");
+  gaia2::init();
+  // Params for transformations
+  ParameterMap enumerate, select_metadata, select_mfcc, select_highlevel, select_key, normalize;
+  enumerate.insert("descriptorNames", QStringList() << "tonal.key*.key" << "tonal.*scale" << "highlevel.*.value");
+  select_metadata.insert("descriptorNames", "metadata.tags.file_name");
+  select_mfcc.insert("descriptorNames", QStringList() << "lowlevel.mfcc*");
+  select_highlevel.insert("descriptorNames", QStringList() << "highlevel*");
+  select_key.insert("descriptorNames", QStringList() << "tonal.key*.key" << "tonal.key*.scale");
+  normalize.insert("except", QStringList() << "lowlevel.mfcc*" << "highlevel*");
+
+  // Reduce future dataset size by removing variable length descriptors,
+  // fixing descriptors length and enumerating string descriptors
+  DataSet* removed_vl   = gaia2::transform(dataset, "RemoveVL");
   DataSet* fixed_length = gaia2::transform(removed_vl, "FixLength");
   delete removed_vl;
-  DataSet* transformed = gaia2::transform(fixed_length, "Enumerate", enumerate_params);
+  DataSet* enumerated  = gaia2::transform(fixed_length, "Enumerate", enumerate);
   delete fixed_length;
-  //
-  ParameterMap select_metadata;
-  select_metadata.insert("descriptorNames", "metadata.tags.file_name");
-  DataSet* metadata = gaia2::transform(transformed, "Select", select_metadata);
-  //
-  ParameterMap select_mfcc;
-  select_mfcc.insert("descriptorNames", QStringList() << "lowlevel.mfcc*");
-  DataSet* mfcc = gaia2::transform(transformed, "Select", select_mfcc);
-  //
-  ParameterMap select_highlevel;
-  select_highlevel.insert("descriptorNames", QStringList() << "highlevel*");
-  DataSet* highlevel = gaia2::transform(transformed, "Select", select_highlevel);
-  //
-  ParameterMap normalize_params;
-  normalize_params.insert("except", QStringList() << "lowlevel.mfcc*" << "highlevel*");
-  DataSet* cleaned    = gaia2::transform(transformed, "Cleaner");
-  DataSet* normalized = gaia2::transform(cleaned, "Normalize", normalize_params);
-  DataSet* pca = Pca(normalized, QStringList() << "lowlevel.mfcc*" << "highlevel*", 25);
-  DataSet* result = MergeDataSets({ metadata, mfcc, highlevel, pca });
-  // to reduce memory usage delete datasets which we don't need
-  delete pca;
-  delete normalized;
+
+  // Select some descriptors before PCA transformation to save them
+  DataSet* metadata   = gaia2::transform(enumerated, "Select", select_metadata);
+  DataSet* mfcc       = gaia2::transform(enumerated, "Select", select_mfcc);
+  DataSet* highlevel  = gaia2::transform(enumerated, "Select", select_highlevel);
+  DataSet* key_scale  = gaia2::transform(enumerated, "Select", select_key);
+
+  // Prepare dataset for PCA and PCA
+  DataSet* cleaned    = gaia2::transform(enumerated, "Cleaner");
+  delete enumerated;
+  DataSet* normalized = gaia2::transform(cleaned, "Normalize", normalize);
   delete cleaned;
+  DataSet* pca        = Pca(normalized, QStringList() << "lowlevel.mfcc*" << "highlevel*", 25);
+  delete normalized;
+
+  // Merge datasets
+  DataSet* result = MergeDataSets({ metadata, mfcc, highlevel, key_scale, pca });
+
+  // Clear all
+  delete pca;
+  delete key_scale;
   delete highlevel;
   delete mfcc;
   delete metadata;
-  delete transformed;
-  //
+
   return result;
 }
 
@@ -162,10 +166,14 @@ DataSet* Pca(DataSet *dataset, const QStringList &except, int dimension) {
   return gaia2::transform(dataset, "PCA", pca_params);
 }
 
-DataSet* MergeDataSets(const vector<DataSet*> &datasets) {
-  DataSet* result = datasets[0];
+DataSet* MergeDataSets(const vector<const DataSet*> &datasets) {
+  DataSet* previous = datasets[0]->copy();
+  DataSet* result;
   for ( int i = 1; i < static_cast<int>(datasets.size()); ++i ) {
-    result = gaia2::mergeDataSets(result, datasets[i]);
+    result = gaia2::mergeDataSets(previous, datasets[i]);
+    if ( i > 1)
+      delete previous;
+    previous = result;
   }
   return result;
 }
@@ -197,7 +205,7 @@ DataSet* SumDataSets(DataSet *first, DataSet *second) {
   if ( first->layout().descriptorNames() != common_descriptors ) {
     selected_first  = gaia2::transform(first, "Select", select_params);
   }
-  if ( first->layout().descriptorNames() != common_descriptors ) {
+  if ( second->layout().descriptorNames() != common_descriptors ) {
     selected_second = gaia2::transform(second, "Select", select_params);
     free = true;
   }
