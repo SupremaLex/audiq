@@ -60,7 +60,7 @@ DistanceFunction* CompressedDefaultMetric(DataSet *dataset, float weight_pca,
   params_pca.insert("descriptorNames", "pca");
   compressed_pca.insert("distance", "Euclidean");
   compressed_pca.insert("params", params_pca);
-  compressed_pca.insert("alpha", 0.01);
+  compressed_pca.insert("alpha", 0.1);
   pca.insert("distance", "ExponentialCompress");
   pca.insert("params", compressed_pca);
   pca.insert("weight", weight_pca);
@@ -71,7 +71,7 @@ DistanceFunction* CompressedDefaultMetric(DataSet *dataset, float weight_pca,
   params_mfcc.insert("descriptorName", "lowlevel.mfcc");
   compressed_mfcc.insert("distance", "KullbackLeibler");
   compressed_mfcc.insert("params", params_mfcc);
-  compressed_mfcc.insert("alpha", 0.01);
+  compressed_mfcc.insert("alpha", 0.1);
   mfcc.insert("distance", "ExponentialCompress");
   mfcc.insert("params", compressed_mfcc);
   mfcc.insert("weight", weight_mfcc);
@@ -86,18 +86,16 @@ DistanceFunction* CompressedDefaultMetric(DataSet *dataset, float weight_pca,
   params_highlevel.insert("weights", weights);
   compressed_highlevel.insert("distance", "WeightedPearson");
   compressed_highlevel.insert("params", params_highlevel);
-  compressed_highlevel.insert("alpha", 0.01);
+  compressed_highlevel.insert("alpha", 0.1);
   highlevel.insert("distance", "ExponentialCompress");
   highlevel.insert("params", compressed_highlevel);
   highlevel.insert("weight", weight_highlevel);
   // Linear combination of Euclidean and Kullback-Leibler and Weighted Pearson metrics
-
   ParameterMap composite_params;
   composite_params.insert("compressed_euclidean_pca", pca);
   composite_params.insert("compressed_kullback_leibner_mfcc", mfcc);
   composite_params.insert("compressed_weighted_pearson_highlevel", highlevel);
   //
-
   return gaia2::MetricFactory::create("LinearCombination", dataset->layout(), composite_params);
 }
 
