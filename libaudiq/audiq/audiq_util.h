@@ -19,7 +19,7 @@ namespace util {
 
 using gaia2::Point;
 using gaia2::DataSet;
-
+struct Concatenate;
 /**
  * @brief ConcatenateDataSets Concatenate datasets from 'datasets_directory' and save result dataset as 'dataset_name'.
  * @param datasets_directory Directory with datasets.
@@ -58,7 +58,7 @@ DataSet* Pca(DataSet *dataset, const QStringList &except, int dimension);
  * MergeDataSets Merges datasets together, provided that their layout don't overlap, and
  * return the resulting dataset.
  */
-DataSet* MergeDataSets(const vector<DataSet*> &datasets);
+DataSet* MergeDataSets(const vector<const DataSet*> &datasets);
 /**
  * SumDataSets Sums datasets. The result dataset contains only intersection of there descriptors.
  */
