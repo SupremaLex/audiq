@@ -5,6 +5,7 @@ Usage: ./audiq [options] folder_with_samples [output_file] [weight_1 weight_2 we
   - -h, --help Show this message.  
   - -o, --one  Use one_dataset mode (recommendation based on sample type {melody, percussion or vocal} ).  
   - -p, --print  Print result to stdout.  
+  - -c CONFIG, --config CONFIG Use audiq configurating file.  
   - -n, --no-processing Don't extract descriptors and datasets creating (use this option if you already have datasets and want
   to test audiq with different modes or weights).  
 
