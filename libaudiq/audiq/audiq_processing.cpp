@@ -21,6 +21,7 @@ map<string, SampleType> name_to_type;
 void SamplesToDataSet(const string &samples_directory,
                       const string &output_directory,
                       const string &profile,
+                      const string &models_directory,
                       const string &dataset_part_name,
                       const int samples_per_dataset,
                       const string &datasets_directory,
@@ -33,7 +34,7 @@ void SamplesToDataSet(const string &samples_directory,
 
   filesystem::create_directory(output_directory);
   util::ReCreateDirs(datasets_directory);
-  ProcessSamples(samples_directory, profile, output_directory);
+  ProcessSamples(samples_directory, profile, output_directory, models_directory);
   util::MergeFiles(output_directory, datasets_directory,
                    dataset_part_name, samples_per_dataset);
   for ( auto t : types::TYPES ) {
@@ -42,7 +43,8 @@ void SamplesToDataSet(const string &samples_directory,
 }
 
 void ProcessSamples(const string &directory, const string &profile,
-                    const string &output_directory, bool compute_highlevel) {
+                    const string &output_directory, const string &models_directory,
+                    bool compute_highlevel) {
   if ( !essentia::isInitialized() )
     essentia::init();
   std::set<string> extensions = { ".wav", ".mp3", ".mp4a", ".ogg", ".aiff" };
@@ -52,18 +54,19 @@ void ProcessSamples(const string &directory, const string &profile,
     std::cout << p << std::endl;
     auto ext = p.path().extension();
     if ( extensions.find(ext) != extensions.end() ) {
-        Extract(p.path().string(), profile, output_directory, compute_highlevel);
+        Extract(p.path().string(), profile, output_directory, models_directory, compute_highlevel);
     }
   }
 }
 
 void Extract(const string &file_name, const string &profile,
-             const string &output_directory, bool compute_highlevel) {
+             const string &output_directory, const string &models_directory,
+             bool compute_highlevel) {
   Pool pool;
   try {
     ExtractLowLevel(&pool, file_name, profile);
     if ( compute_highlevel ) {
-      ExtractHighLevel(&pool);
+      ExtractHighLevel(&pool, models_directory);
     }
   }
   catch (essentia::EssentiaException e) {
@@ -77,11 +80,11 @@ void Extract(const string &file_name, const string &profile,
   delete output;
 }
 
-void ProcessSigsHighLevel(const string &directory) {
+void ProcessSigsHighLevel(const string &directory, const string &models_directory) {
   if ( !essentia::isInitialized() )
     essentia::init();
   for ( auto &p : filesystem::recursive_directory_iterator(directory) ) {
-    ExtractHighLevel(p.path().string());
+    ExtractHighLevel(p.path().string(), models_directory);
   }
 }
 
@@ -92,14 +95,9 @@ void ExtractLowLevel(Pool *pool, const string &file_name,
   InitializeMap();
   if ( filesystem::exists(profile) ) {
     extractor->configure("profile", profile);
-    /*extractor = AlgorithmFactory::create("MusicExtractor",
-                                         "profile", profile);*/
   } else {
     extractor->configure("lowlevelSilentFrames", "noise",
                          "tonalSilentFrames", "noise");
-    /*extractor = AlgorithmFactory::create("MusicExtractor",
-                                         "lowlevelSilentFrames", "drop",
-                                         "tonalSilentFrames", "drop");*/
   }
   extractor->input("filename").set(file_name);
   extractor->output("results").set(*pool);
@@ -108,30 +106,33 @@ void ExtractLowLevel(Pool *pool, const string &file_name,
   delete extractor;
 }
 
-void ExtractHighLevel(const string &file_name) {
+void ExtractHighLevel(const string &file_name, const string &models_directory) {
   Pool pool;
   Algorithm* input  = AlgorithmFactory::create("YamlInput", "filename", file_name);
   Algorithm* output = AlgorithmFactory::create("YamlOutput", "filename", file_name);
   input->output("pool").set(pool);
   input->compute();
-  ExtractHighLevel(&pool);
+  ExtractHighLevel(&pool, models_directory);
   output->input("pool").set(pool);
   output->compute();
 }
 
-void ExtractHighLevel(Pool *pool) {
+void ExtractHighLevel(Pool *pool, const string &models_directory) {
   InitializeMap();
-  vector<string> models_common = { "./svm_models/synth_or_acoustic.history",
-                                   "./svm_models/shot_or_loop.history",
-                                   "./svm_models/bass.history"};
+  vector<string> models_common = { models_directory + MODEL_BASS,
+                                   models_directory + MODEL_SHOT_OR_LOOP,
+                                   models_directory + MODEL_SYNTH_OR_ACOUSTIC };
+  vector<string> model_type = { models_directory + MODEL_TYPE };
+  vector<string> model_phrase = { models_directory + MODEL_PHRASE };
+  vector<string> model_perc = { models_directory + MODEL_PERCUSSION_TYPE };
   pool->removeNamespace("highlevel");
-  ExtractHighLevel(pool, { "./svm_models/type.history" });
+  ExtractHighLevel(pool, model_type);
   switch ( name_to_type[pool->value<string>(TYPE_DESCRIPTOR)] ) {
   case vocal:
-    ExtractHighLevel(pool, { "./svm_models/phrase.history" });
+    ExtractHighLevel(pool, model_phrase);
     break;
   case percussion:
-    ExtractHighLevel(pool, { "./svm_models/percussion_type.history" });
+    ExtractHighLevel(pool, model_perc);
   default:
     ExtractHighLevel(pool, models_common);
     break;

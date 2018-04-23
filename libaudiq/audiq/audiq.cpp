@@ -6,24 +6,23 @@
 #include "audiq/audiq_config.h"
 #include "audiq/audiq_similarity_model.h"
 
-audiq::audiq_similar audiq::Recommend(const bool one_dataset, const vector<float> &weights) {
+audiq::audiq_similar audiq::Recommend(const bool one_dataset, const string &global_dataset_name,
+                                      const string &user_dataset_name, const vector<float> &weights) {
   using gaia2::DataSet;
   gaia2::init();
-  string user_ds_name = USER_DATASET_NAME;
-  string global_ds_name = GLOBAL_DATASET_NAME;
   vector<DataSet*> user_datasets;
   vector<DataSet*> global_datasets;
   audiq_similar similar;
 
   for ( auto t : types::TYPES ) {
     // if such file don't exists => there are no samples of this type in user' samples
-    if ( !filesystem::exists(user_ds_name + "_" + t + ".db") ) {
+    if ( !filesystem::exists(user_dataset_name + "_" + t + ".db") ) {
       continue;
     }
     DataSet* user  = new DataSet;
     DataSet* global = new DataSet;
-    user->load(QString::fromStdString(user_ds_name + "_" + t + ".db"));
-    global->load(QString::fromStdString(global_ds_name + "_" + t + ".db"));
+    user->load(QString::fromStdString(user_dataset_name + "_" + t + ".db"));
+    global->load(QString::fromStdString(global_dataset_name + "_" + t + ".db"));
     if ( !one_dataset ) {
       map<string, vector<string> > tmp = similarity::FindSimilar(global, user, weights);
       similar.insert(tmp.begin(), tmp.end());

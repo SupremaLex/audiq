@@ -9,8 +9,10 @@
 namespace audiq {
 typedef std::map<std::string, std::vector<std::string> > audiq_similar;
 
-audiq_similar Recommend(const bool one_dataset = true,
-                        const std::vector<float> &weights = {1, 2, 3});
+audiq_similar Recommend(const bool one_dataset,
+                        const std::string &global_dataset_name,
+                        const std::string &user_dataset_name,
+                        const std::vector<float> &weights);
 /**
  * PrintResult Prints result to stdout.
  */
@@ -26,6 +28,7 @@ namespace processing {
 void SamplesToDataSet(const std::string &samples_directory,
                       const std::string &output_directory = DESCRIPTORS_DIR,
                       const std::string &profile = "",
+                      const std::string &models_directory = MODELS_DIR,
                       const std::string &dataset_part_name = USER_DATASET_PART,
                       const int samples_per_dataset = SAMPLES_PER_DATASET,
                       const std::string &datasets_directory = DATASETS_DIR,

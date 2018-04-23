@@ -24,6 +24,7 @@ using essentia::Pool;
 void SamplesToDataSet(const string &samples_directory,
                       const string &output_directory,
                       const string &profile,
+                      const string &models_directory,
                       const string &dataset_part_name,
                       const int samples_per_dataset,
                       const string &datasets_directory,
@@ -34,9 +35,10 @@ void SamplesToDataSet(const string &samples_directory,
  * @param output_directory Directory where files with desciprots store
  */
 void ProcessSamples(const string &samples_directory, const string &profile,
-                    const string &output_directory, bool compute_highleve = true);
+                    const string &output_directory, const string &models_directory,
+                    bool compute_highleve = true);
 
-void ProcessSigsHighLevel(const string &directory);
+void ProcessSigsHighLevel(const string &directory, const string &models_directory);
 /**
  * @brief Extract Extracts descriptors from single sample with name 'file_name' and stores them as 'output_file_name'
  * @param file_name Audio file (.wav, .aiff, .ogg, .mp3, mp4a).
@@ -45,13 +47,14 @@ void ProcessSigsHighLevel(const string &directory);
  * @note Result file is YAML file
  */
 void Extract(const string &file_name, const string &profile,
-             const string &output_directory, bool compute_highlevel);
+             const string &output_directory, const string &models_directory,
+             bool compute_highlevel);
 
 void ExtractLowLevel(Pool *pool, const string &file_name, const string &profile);
 
-void ExtractHighLevel(const string &file_name);
+void ExtractHighLevel(const string &file_name, const string &models_directory);
 
-void ExtractHighLevel(Pool *pool);
+void ExtractHighLevel(Pool *pool, const string &models_directory);
 
 void ExtractHighLevel(Pool *pool, const vector<string> &models);
 
