@@ -1,0 +1,15 @@
+global_dataset_name: "audiq_dataset"
+user_dataset_name: "user_dataset"
+descriptors_directory: "descriptors/"
+datasets_parts_directory: "datasets_parts/"
+svm_models_directory: "svm_models/"
+dataset_mode: "one"
+
+only_recommendation: false
+
+samples_in_dataset: 2000
+recommended_samples_number: 20
+weight_lowlevel: 1
+weight_timbre: 1
+weight_highlevel: 1
+
