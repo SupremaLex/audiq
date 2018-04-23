@@ -34,11 +34,9 @@ int main(int argc, char* argv[]) {
   string output_file;
   string audiq_profile;
   bool print = false;
-  bool processing = true;
   std::vector<float> weights = {1, 1, 1};
   int c;
   audiq::Audiq audiq_app = audiq::Audiq();
-
   static struct option long_options[] = {
   {"help", no_argument, 0, 'h'},
   {"one", no_argument, 0, 'o'},
@@ -63,7 +61,7 @@ int main(int argc, char* argv[]) {
       audiq_app.configure("dataset_mode", "one");
       break;
     case 'n':
-      processing = false;
+      audiq_app.configure("only_recommendation", true);
       break;
     case 'c':
       audiq_app.configure("audiq_profile", optarg);
@@ -104,9 +102,6 @@ int main(int argc, char* argv[]) {
   audiq_app.configure("weight_highlevel", weights[2]);
   if ( !audiq_profile.empty() ) {
     audiq_app.configure("audiq_profile", audiq_profile);
-  }
-  if ( !processing ) {
-    audiq_app.configure("only_recommendation", true);
   }
 
   audiq_app.Start();
