@@ -91,14 +91,17 @@ void Audiq::Start() {
   processing::SamplesToDataSet(_samples_directory,
                                _options.value<string>("descriptors_directory"),
                                _options.value<string>("extractor_profile"),
+                               _options.value<string>("svm_models_directory"),
                                _options.value<string>("user_dataset_name") + "part",
                                _options.value<Real>("samples_in_dataset"),
                                _options.value<string>("datasets_parts_directory"),
                                _options.value<string>("user_dataset_name"));
   }
-  _similar_samples =  Recommend(dataset_mode, {_options.value<float>("weight_lowlevel"),
-                                               _options.value<float>("weight_timbre"),
-                                               _options.value<float>("weight_highlevel")});
+  _similar_samples =  Recommend(dataset_mode, _options.value<string>("global_dataset_name"),
+                                _options.value<string>("user_dataset_name"), {
+                                  _options.value<float>("weight_lowlevel"),
+                                  _options.value<float>("weight_timbre"),
+                                  _options.value<float>("weight_highlevel") });
 }
 
 audiq::types::audiq_similar Audiq::GetResult() {
