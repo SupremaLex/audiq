@@ -37,6 +37,10 @@ int main(int argc, char* argv[]) {
   std::vector<float> weights = {1, 1, 1};
   int c;
   audiq::Audiq audiq_app = audiq::Audiq();
+  //audiq_app.configure("samples_directory", "/home/george/Projects/test/");
+  //audiq_app.configure("audiq_profile", "/home/george/Projects/audiq/audiq_config");
+  //audiq_app.configure("svm_models_directory", "/home/george/Projects/audiq/svm_models/");
+  //audiq_app.Start();
   static struct option long_options[] = {
   {"help", no_argument, 0, 'h'},
   {"one", no_argument, 0, 'o'},
